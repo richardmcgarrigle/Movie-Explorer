@@ -5,7 +5,7 @@ Set up a GitHub Pro-native CI/CD pipeline that validates changes and produces a 
 
 ## Current-State and Future-State Fit
 - Current implementation is a basic React frontend.
-- The solution is expected to evolve to include backend/services.
+- The roadmap is expected to evolve to include backend/services.
 - The pipeline should therefore be container-first now, so frontend and future services can share one deployment model.
 
 ## Pipeline Visual (Mermaid)
@@ -38,6 +38,10 @@ Steps:
 4. Run lint (`npm run lint`)
 5. Run build (`npm run build`)
 6. Run tests (when available)
+
+Test-step policy:
+- If no test suite exists yet, keep the test step as a non-blocking/skipped step.
+- Make tests required once baseline coverage is introduced.
 
 Expected result:
 - PRs must pass quality gates before merge
@@ -73,6 +77,7 @@ Assumptions: one private repository, GitHub Pro account, low-to-moderate activit
   - Cost increases with image size, retention, and pull volume
 - **Self-hosted runtime**:
   - Main variable cost (VM/server + bandwidth + backups + monitoring)
+  - If orchestration is introduced, include platform/control-plane costs in estimates
 
 Recommendation: treat self-hosted infrastructure as primary cost driver and monitor Actions/GHCR consumption monthly.
 
