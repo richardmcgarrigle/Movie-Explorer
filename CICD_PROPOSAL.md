@@ -12,7 +12,7 @@ Set up a GitHub Pro-native CI/CD pipeline that validates changes and produces a 
 ```mermaid
 flowchart LR
   A[Short-lived feature branch] --> B[PR to main trunk]
-  B --> C[CI: npm ci + lint + build + tests]
+  B --> C[CI: npm ci + lint + build + tests if present]
   C -->|pass| D[Merge to main]
   D --> E[Build Docker image]
   E --> F[Push image to GHCR]
@@ -52,6 +52,10 @@ Steps:
 2. Build Docker image (tag with commit SHA and `main`)
 3. Push image to GHCR
 4. Deploy image to self-hosted environment (e.g., single host Docker, Docker Compose, or Kubernetes)
+
+Recommended start for this project:
+- Begin with single-host Docker Compose for lowest operational overhead.
+- Move to Kubernetes only when scaling/HA requirements justify the added complexity.
 
 Expected result:
 - Every merge to `main` produces a versioned deployable image
@@ -93,7 +97,7 @@ Recommendation: treat self-hosted infrastructure as primary cost driver and moni
 
 ## Secrets and Configuration
 - `GHCR` publish via `GITHUB_TOKEN` (or PAT if cross-repo/org policy requires)
-- Deployment secrets (host credentials, SSH key, kube config, etc.) stored in GitHub Environments
+- Deployment secrets (host credentials, SSH key, kubeconfig, etc.) stored in GitHub Environments
 - Optional repository variables:
   - `NODE_VERSION` (e.g., `20`)
   - `IMAGE_NAME`
