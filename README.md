@@ -2,6 +2,23 @@
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
+## GitHub Pages Deployment
+
+This repository is configured to deploy automatically to GitHub Pages from the `main` branch.
+
+- Workflow: `.github/workflows/deploy-gh-pages.yml`
+- Trigger: push to `main` (or manual `workflow_dispatch`)
+- Build output: `dist/`
+
+### Required repository configuration
+
+In GitHub repository settings:
+
+1. Go to **Settings -> Pages**
+2. Under **Build and deployment**, set **Source** to **GitHub Actions**
+
+The workflow sets `VITE_BASE_PATH` to `/<repo-name>/` so the app loads correctly from the project Pages URL.
+
 Currently, two official plugins are available:
 
 - [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
