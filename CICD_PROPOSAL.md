@@ -3,6 +3,16 @@
 ## Objective
 Set up a GitHub Pro-native CI/CD pipeline that automatically validates code changes and deploys the application for hosting with minimal operational overhead.
 
+## Pipeline Visual (Mermaid)
+```mermaid
+flowchart LR
+  A[Short-lived feature branch] --> B[Open PR to main]
+  B --> C[CI: npm ci + lint + build]
+  C -->|pass| D[Merge to main trunk]
+  D --> E[CD: build production artifact]
+  E --> F[Deploy to GitHub Pages]
+```
+
 ## Proposed Hosting Platform
 **GitHub Pages** (best fit for a static frontend app):
 - Native GitHub integration
@@ -65,7 +75,8 @@ Expected result:
   - `NODE_VERSION` (e.g., `20`)
 
 ## Branching and Release Strategy
-- Feature branches -> Pull Request -> `main`
+- Trunk-based development with `main` as the trunk
+- Use short-lived feature branches where needed -> Pull Request -> `main`
 - CI must pass before merge
 - Merge to `main` triggers deployment
 - Rollback approach: revert commit on `main` and redeploy automatically
