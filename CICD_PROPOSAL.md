@@ -1,24 +1,29 @@
 # CI/CD Proposal for Movie-Explorer (GitHub Pro)
 
 ## Objective
-Set up a GitHub Pro-native CI/CD pipeline that automatically validates code changes and deploys the application for hosting with minimal operational overhead.
+Set up a GitHub Pro-native CI/CD pipeline that validates changes and produces a Docker image as the deployable artifact for self-hosted environments.
+
+## Current-State and Future-State Fit
+- Current implementation is a basic React frontend.
+- The solution is expected to evolve to include backend/services.
+- The pipeline should therefore be container-first now, so frontend and future services can share one deployment model.
 
 ## Pipeline Visual (Mermaid)
 ```mermaid
 flowchart LR
-  A[Short-lived feature branch] --> B[Open PR to main]
-  B --> C[CI: npm ci + lint + build]
-  C -->|pass| D[Merge to main trunk]
-  D --> E[CD: build production artifact]
-  E --> F[Deploy to GitHub Pages]
+  A[Short-lived feature branch] --> B[PR to main trunk]
+  B --> C[CI: npm ci + lint + build + tests]
+  C -->|pass| D[Merge to main]
+  D --> E[Build Docker image]
+  E --> F[Push image to GHCR]
+  F --> G[Deploy image to self-hosted runtime]
 ```
 
 ## Proposed Hosting Platform
-**GitHub Pages** (best fit for a static frontend app):
-- Native GitHub integration
-- Zero external infrastructure
-- Automated deployments from GitHub Actions
-- Custom domain support (optional)
+**Self-hosted runtime with Docker images** (primary path):
+- Deploy from container images built in GitHub Actions
+- Store images in GitHub Container Registry (GHCR)
+- Works for current React app and future API/worker services
 
 ## Proposed Pipeline Design
 
@@ -32,63 +37,84 @@ Steps:
 3. Install dependencies (`npm ci`)
 4. Run lint (`npm run lint`)
 5. Run build (`npm run build`)
+6. Run tests (when available)
 
 Expected result:
-- PRs must pass lint/build before merge
-- Faster feedback and consistent quality gates
+- PRs must pass quality gates before merge
+- CI remains trunk-based with short-lived branches
 
-### 2) Continuous Deployment (on merge to main)
+### 2) Continuous Delivery (on merge to `main`)
 Trigger:
 - `push` to `main`
 
 Steps:
 1. Checkout code
-2. Set up Node.js (LTS)
-3. Install dependencies (`npm ci`)
-4. Build production assets (`npm run build`)
-5. Upload artifact
-6. Deploy to GitHub Pages using Actions deployment workflow
+2. Build Docker image (tag with commit SHA and `main`)
+3. Push image to GHCR
+4. Deploy image to self-hosted environment (e.g., single host Docker, Docker Compose, or Kubernetes)
 
 Expected result:
-- Every merge to `main` produces an automatic production deployment
+- Every merge to `main` produces a versioned deployable image
+- Deployment uses the exact built artifact from CI/CD
+
+## Expected Cost (High-level)
+Assumptions: one private repository, GitHub Pro account, low-to-moderate activity.
+
+- **GitHub Pro**: fixed monthly account cost
+- **GitHub Actions usage**:
+  - Typical low-volume project: often within included minutes
+  - Higher-volume or heavier Docker builds: possible additional usage charges
+- **GHCR storage/egress**:
+  - Small image footprint: low cost
+  - Cost increases with image size, retention, and pull volume
+- **Self-hosted runtime**:
+  - Main variable cost (VM/server + bandwidth + backups + monitoring)
+
+Recommendation: treat self-hosted infrastructure as primary cost driver and monitor Actions/GHCR consumption monthly.
 
 ## GitHub Pro Features to Use
-1. **GitHub Actions** for CI and deployment jobs  
-2. **GitHub Pages** for application hosting  
-3. **Environments** (`production`) with optional required reviewers for deploy approval  
+1. **GitHub Actions** for CI and image build/publish/deploy jobs  
+2. **GitHub Container Registry (GHCR)** for versioned deployable artifacts  
+3. **Environments** (`staging`, `production`) with optional required reviewers  
 4. **Branch protection rules** on `main`:
    - Require pull requests
-   - Require passing status checks (CI workflow)
+   - Require passing status checks
    - Optionally require up-to-date branch before merge  
-5. **Dependabot** (optional but recommended) for dependency updates  
+5. **Dependabot** (optional but recommended) for dependency and container updates  
 6. **CodeQL / security scanning** (optional) for security posture
 
 ## Recommended Workflow Structure
 - `ci.yml`  
-  - Runs lint/build checks for PR validation
-- `deploy-pages.yml`  
-  - Builds and deploys on `main`
+  - PR validation (lint/build/tests)
+- `build-image.yml`  
+  - Build and publish image on `main`
+- `deploy-self-hosted.yml`  
+  - Deploy published image to runtime
 
 ## Secrets and Configuration
-- No deployment secrets required for standard GitHub Pages deployment using `GITHUB_TOKEN`
+- `GHCR` publish via `GITHUB_TOKEN` (or PAT if cross-repo/org policy requires)
+- Deployment secrets (host credentials, SSH key, kube config, etc.) stored in GitHub Environments
 - Optional repository variables:
   - `NODE_VERSION` (e.g., `20`)
+  - `IMAGE_NAME`
+  - `DEPLOY_TARGET`
 
 ## Branching and Release Strategy
 - Trunk-based development with `main` as the trunk
 - Use short-lived feature branches where needed -> Pull Request -> `main`
 - CI must pass before merge
-- Merge to `main` triggers deployment
-- Rollback approach: revert commit on `main` and redeploy automatically
+- Merge to `main` triggers image build and deployment
+- Rollback approach: redeploy a previous known-good image tag
 
 ## Initial Rollout Plan
-1. Add CI workflow file and verify PR checks
-2. Add GitHub Pages deployment workflow
-3. Enable Pages source as **GitHub Actions**
-4. Configure branch protection for `main`
+1. Add `ci.yml` and verify PR checks for current React app
+2. Add Dockerfile and `build-image.yml` to publish image to GHCR
+3. Add `deploy-self-hosted.yml` for target runtime
+4. Configure environment protection and branch protection
 5. Validate end-to-end deployment with a test PR and merge
 
 ## Success Criteria
-- PRs show automated lint/build status checks
-- Merging to `main` automatically updates the hosted app
+- PRs show automated lint/build (and test when present) status checks
+- Merging to `main` automatically produces a versioned Docker image
+- Self-hosted deployment consumes the published image artifact
 - Deployment history and logs are visible in GitHub Actions/Environments
